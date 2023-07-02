@@ -1,6 +1,6 @@
 #include "dbscan.h"
 
-static double distEv(const double *x, const double *c, const int m) {
+double distEv(const double *x, const double *c, const int m) {
 	double d, r = 0;
 	int i = 0;
 	while (i++ < m) {
@@ -10,7 +10,46 @@ static double distEv(const double *x, const double *c, const int m) {
 	return sqrt(r);
 }
 
-static void neighbors_matr(const double *x, unsigned char *nei, const int n, const int m, const double eps) {
+double getAvDist(const double *x, const int n, const int m) {
+	double res = 0;
+	int i, j;
+	for (i = 0; i < n * m; i += m) {
+		for (j = i + m; j < n * m; j += m) {
+			res += distEv(&x[i], &x[j], m);
+		}
+	}
+	return 2 * res / (n * n + n);
+}
+
+void autoscaling(double *x, const int n, const int m, double *eps) {
+	double beforeAvDist = getAvDist(x, n, m), afterAvDist, sd, Ex, Exx;
+	const int s = n * m;
+	int i, j = 0;
+	while (j < m) {
+		i = j;
+		Ex = Exx = 0;
+		while (i < s) {
+			sd = x[i];
+			Ex += sd;
+			Exx += sd * sd;
+			i += m;
+		}
+		Exx /= n;
+		Ex /= n;
+		sd = sqrt(Exx - Ex * Ex);
+		i = j;
+		while (i < s) {
+			x[i] = (x[i] - Ex) / sd;
+			i += m;
+		}
+		j++;
+	}
+	afterAvDist = getAvDist(x, n, m);
+	*eps /= (beforeAvDist / afterAvDist);
+}
+
+
+void neighbors_matr(const double *x, unsigned char *nei, const int n, const int m, const double eps) {
 	int i, j;
 	i = 0;
 	while (i < n) {
@@ -23,7 +62,7 @@ static void neighbors_matr(const double *x, unsigned char *nei, const int n, con
 	}
 }
 
-static int n_nums(const unsigned char *nei, const int n) {
+int n_nums(const unsigned char *nei, const int n) {
 	int i, r;
 	i = r = 0;
 	while (i++ < n) {
@@ -32,7 +71,7 @@ static int n_nums(const unsigned char *nei, const int n) {
 	return r;
 }
 
-static void marker(const unsigned char *neighbors, int *status, const int n, const int k, const int mark) {
+void marker(const unsigned char* const neighbors, int* const status, const int n, const int k, const int mark) {
 	const int buf = k * n;
 	int i = 0;
 	while (i < n) {
@@ -44,8 +83,12 @@ static void marker(const unsigned char *neighbors, int *status, const int n, con
 	}
 }
 
-void dbscan(const double *x, int *res, const int n, const int m, const int minPts, const double eps) {
-	memset(res, -1, n * sizeof(int));
+void dbscan(const double* const X, int* const res, const int n, const int m, const int minPts, const double epsIn) {
+	double *x = (double*)malloc(n * m * sizeof(double));
+	memcpy(&x[0], &X[0], n * m * sizeof(double));
+	double eps = epsIn;
+	autoscaling(x, n, m, &eps);
+	memset(&res[0], -1, n * sizeof(int));
 	unsigned char *neighbors = (unsigned char*)malloc(n * n * sizeof(unsigned char));
 	neighbors_matr(x, &neighbors[0], n * m, m, eps);
 	int i, count;
@@ -58,5 +101,6 @@ void dbscan(const double *x, int *res, const int n, const int m, const int minPt
 		}
 		i++;
 	}
+	free(x);
 	free(neighbors);
 }

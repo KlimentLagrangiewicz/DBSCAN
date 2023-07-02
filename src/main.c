@@ -29,23 +29,22 @@ int main(int argc, char **argv) {
 		puts("Not enough parameters!");
 		exit(1);
 	}
-	const int n = atoi(argv[1]), m = atoi(argv[2]), minPts = atoi(argv[3]);
-	double eps = strtod(argv[4], NULL), eps2 = eps;
-	if ((n < 0) || (m < 0) || (minPts < 0) || (eps < 0)) {
-		puts("Value of parameters is incorrect...");
+	const int n = atoi(argv[2]), m = atoi(argv[3]), minPts = atoi(argv[4]);
+	const double eps = strtod(argv[5], NULL);
+	if ((n < 0) || (m < 0) || (minPts < 0) || (eps < 0) || (minPts >= n)) {
+		puts("Values of parameters are incorrect...");
 		exit(1);
 	}
 	double *x =(double*)malloc(n * m * sizeof(double));
 	int *y = (int*)malloc(n * sizeof(int));
-	fscanfData(argv[5], x, n * m);
-	autoscaling(x, n, m, &eps);
+	fscanfData(argv[1], x, n * m);
 	long long t;
 	clock_t cl = clock();
 	time_start();
 	dbscan(x, y, n, m, minPts, eps);
 	t = time_stop();
 	cl = clock() - cl;
-	fprintfRes(argv[6], y, n, minPts, eps2);
+	fprintfRes(argv[6], y, n, minPts, eps);
 	if (t < 0) {
 		printf("Time for DBSCAN clustering = %lf s.\n", (double)cl);
 	} else {
