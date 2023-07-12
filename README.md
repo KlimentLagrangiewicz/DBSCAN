@@ -8,7 +8,7 @@ The main idea of the algorithm is to assign neighboring closely located points t
   +  $minPts \in ℕ$ — minimum number of points required to form a dense region;
   +  $\epsilon > 0$ — concentration radius.  
 #### Output data:   
-  +  $Y=\left\\{y_i|y_i\in ℕ,i\in\overline{\left(1,n\right)}\right\\}$ — cluster labels.  
+  +  $Y=\left\\{y_i|y_i\in ℤ,i=\overline{\left(1,n\right)}\right\\}$ — cluster labels and noise markers.  
 #### Advantages of DBSCAN:
   +  Easy to implement;  
   +  Low algorithmic complexity;  
@@ -28,8 +28,8 @@ Def.3. A point q is reachable from p if there is a path $p_1,\ldots,p_n$ with $p
 Step 1. Data preparing (autoscaling): $x_{i,j}=\frac{x_{i,j}-\mathrm{E_{X^{j}}}}{\sigma_{X^{j}}}$;  
 Step 2. Mark all points as unselected;  
 Step 3. Select point from unselected core points;  
-Step 4. Mark that point and points, which reachable from her;  
-Step 5. Repeat steps 3, 4 until all core points have been marker;  
+Step 4. Mark that point and points, which reachable from it;  
+Step 5. Repeat steps 3, 4 until all core points have been marking;  
 Step 6. Mark the unmarked points as noise.  
 ## Example of usage
 ```
