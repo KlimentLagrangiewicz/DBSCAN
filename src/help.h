@@ -5,6 +5,8 @@
 #include <stdlib.h>
 
 void fscanfData(const char *fn, double *x, const int n);
-void fprintfRes(const char *fn, const int *y, const int n, const int minPts, const double eps);
+int getIntWidth(int n);
+int getMax(const int *y, int n);
+void fprintfRes(const char *fn, const int *y, const int n, const int m, const int minPts, const double eps);
 
 #endif

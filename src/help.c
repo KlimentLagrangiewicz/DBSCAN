@@ -2,34 +2,54 @@
 
 void fscanfData(const char *fn, double *x, const int n) {
 	FILE *fl = fopen(fn, "r");
-	if (fl == NULL) {
-		printf("Can't open %s file for reading...\n", fn);
+	if (!fl) {
+		printf("Can't open %s file for reading\n", fn);
 		exit(1);
 	}
 	int i = 0;
-	while ((i < n) && !feof(fl)) {
-		if (fscanf(fl, "%lf", &x[i])) {}
+	while (i < n && !feof(fl)) {
+		if (fscanf(fl, "%lf", x + i)) {}
 		i++;
 	}
 	fclose(fl);
 }
 
-void fprintfRes(const char *fn, const int *y, const int n, const int minPts, const double eps) {
+int getIntWidth(int n) {
+	if (n == 0) return 1;
+	int res = 0;
+	if (n < 0) {
+		res = 1;
+		n *= -1;
+	}
+	while (n) {
+		res++;
+		n /= 10;
+	}
+	return res;
+}
+
+int getMax(const int *y, int n) {
+	int max = *(y++);
+	while (--n) {
+		if (*y > max) max = *y;
+		y++;
+	}
+	return max;
+}
+
+void fprintfRes(const char *fn, const int *y, const int n, const int m, const int minPts, const double eps) {
 	FILE *fl  = fopen(fn, "a");
-	if (fl == NULL) {
-		printf("Can't open %s file for writing...\n", fn);
+	if (!fl) {
+		printf("Can't open %s file for writing\n", fn);
 		exit(1);
 	}
-	fprintf(fl, "Result of DBSCAN clustering...\nminPts = %d;\nEps = %lf;\n", minPts, eps);
-	int i = 0;
-	while (i < n) {
-		if (y[i] == -1) {
-			fprintf(fl, "Object[ %d ] = Noise;\n", i);
-		} else {
-			fprintf(fl, "Object[ %d ] = %d;\n", i, y[i]);
-		}
-		i++;
+	fprintf(fl, "Result of DBSCAN clustering...\nn = %d, m = %d\nminPts = %d, Eps = %lf\n", n, m, minPts, eps);
+	const int width1 = getIntWidth(n), width2 = getIntWidth(getMax(y, n));
+	int i;
+	for (i = 0; i < n; i++) {
+		if (y[i] == -1) fprintf(fl, "Object[%*d] = noise\n", width1, i + 1);
+		else fprintf(fl, "Object[%*d] = %*d\n", width1, i + 1, width2, y[i]);
 	}
-	fprintf(fl, "\n");
+	fputc('\n', fl);
 	fclose(fl);
 }

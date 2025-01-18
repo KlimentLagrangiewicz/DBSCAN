@@ -1,105 +1,92 @@
 #include "dbscan.h"
 
-double distEv(const double *x, const double *c, const int m) {
-	double d, r = 0;
-	int i = 0;
-	while (i++ < m) {
-		d = *(x++) - *(c++);
+double getDistance(const double *x1, const double *x2, int m) {
+	double d, r = 0.0;
+	while (m--) {
+		d = *(x1++) - *(x2++);
 		r += d * d;
 	}
 	return sqrt(r);
 }
 
 double getAvDist(const double *x, const int n, const int m) {
-	double res = 0;
+	double res = 0.0;
 	int i, j;
 	for (i = 0; i < n * m; i += m) {
 		for (j = i + m; j < n * m; j += m) {
-			res += distEv(&x[i], &x[j], m);
+			res += getDistance(x + i, x + j, m);
 		}
 	}
-	return 2 * res / (n * n + n);
+	return 2.0 * res / (n * n + n);
 }
 
-void autoscaling(double *x, const int n, const int m, double *eps) {
-	double beforeAvDist = getAvDist(x, n, m), afterAvDist, sd, Ex, Exx;
+void autoscaling(double* const x, const int n, const int m, double *eps) {
+	const double beforeAvDist = getAvDist(x, n, m);
 	const int s = n * m;
-	int i, j = 0;
-	while (j < m) {
-		i = j;
-		Ex = Exx = 0;
-		while (i < s) {
-			sd = x[i];
+	int j;
+	for (j = 0; j < m; j++) {
+		double sd, Ex = 0.0, Exx = 0.0, *ptr;
+		for (ptr = x + j; ptr < x + s; ptr += m) {
+			sd = *ptr;
 			Ex += sd;
 			Exx += sd * sd;
-			i += m;
 		}
 		Exx /= n;
 		Ex /= n;
 		sd = sqrt(Exx - Ex * Ex);
-		i = j;
-		while (i < s) {
-			x[i] = (x[i] - Ex) / sd;
-			i += m;
+		for (ptr = x + j; ptr < x + s; ptr += m) {
+			*ptr = (*ptr - Ex) / sd;
 		}
-		j++;
 	}
-	afterAvDist = getAvDist(x, n, m);
-	*eps /= (beforeAvDist / afterAvDist);
+	const double afterAvDist = getAvDist(x, n, m);
+	*eps /= beforeAvDist / afterAvDist;
 }
 
-
-void neighbors_matr(const double *x, unsigned char *nei, const int n, const int m, const double eps) {
-	int i, j;
-	i = 0;
-	while (i < n) {
-		j = 0;
-		while (j < n) {
-			*(nei++) = ((i != j) && (distEv(&x[i], &x[j], m) <= eps)) ? 1 : 0;
-			j += m;
-		}
-		i += m;
+void setNeighborsRow(unsigned char *ptrRow, const double *const x, const double* X, int n, const int m, const double eps) {
+	while (n--) {
+		*(ptrRow++) = (x != X && getDistance(x, X, m) <= eps) ? 1 : 0;
+		X += m;
 	}
 }
 
-int n_nums(const unsigned char *nei, const int n) {
-	int i, r;
-	i = r = 0;
-	while (i++ < n) {
-		if (*(nei++)) r++;
+unsigned char* getNeighborsMatr(const double *x, const int n, const int m, const double eps) {
+	unsigned char* nMatr = (unsigned char*)malloc(n * n * sizeof(unsigned char));
+	int i;
+	for (i = 0; i < n; i++) {
+		setNeighborsRow(nMatr + i * n, x + i * m, x, n, m, eps);
 	}
+	return nMatr;
+}
+
+int neighborsNum(const unsigned char *nei, int n) {
+	int r = 1;
+	while (n--) if (*(nei++)) r++;
 	return r;
 }
 
-void marker(const unsigned char* const neighbors, int* const status, const int n, const int k, const int mark) {
-	const int buf = k * n;
-	int i = 0;
-	while (i < n) {
-		if ((status[i] == -1) && (neighbors[buf + i])) {
+void marking(const unsigned char* const neighbors, int* const status, const int n, const int k, const int mark) {
+	int i;
+	for (i = 0; i < n; i++) {
+		if (status[i] == -1 && neighbors[k + i]) {
 			status[i] = mark;
-			marker(neighbors, status, n, i, mark);
+			marking(neighbors, status, n, i * n, mark);
 		}
-		i++;
 	}
 }
 
-void dbscan(const double* const X, int* const res, const int n, const int m, const int minPts, const double epsIn) {
+void dbscan(const double* const X, int* const y, const int n, const int m, const int minPts, double eps) {
 	double *x = (double*)malloc(n * m * sizeof(double));
-	memcpy(&x[0], &X[0], n * m * sizeof(double));
-	double eps = epsIn;
+	memcpy(x, X, n * m * sizeof(double));
 	autoscaling(x, n, m, &eps);
-	memset(&res[0], -1, n * sizeof(int));
-	unsigned char *neighbors = (unsigned char*)malloc(n * n * sizeof(unsigned char));
-	neighbors_matr(x, &neighbors[0], n * m, m, eps);
-	int i, count;
-	i = count = 0;
-	while (i < n) {
-		if ((res[i] == -1) && (n_nums(&neighbors[i * n], n) >= minPts)) {
-			res[i] = count;
-			marker(neighbors, res, n, i, count);
+	memset(y, -1, n * sizeof(int));
+	unsigned char *neighbors = getNeighborsMatr(x, n, m, eps);
+	int i, count = 0;
+	for (i = 0; i < n; i++) {
+		if (y[i] == -1 && neighborsNum(neighbors + i * n, n) >= minPts) {
+			y[i] = count;
+			marking(neighbors, y, n, i * n, count);
 			count++;
 		}
-		i++;
 	}
 	free(x);
 	free(neighbors);
